@@ -134,7 +134,27 @@ XColor createXColorFromRGBA(short red, short green, short blue, short alpha) {
     *(&color.pixel) = ((*(&color.pixel)) & 0x00ffffff) | (alpha << 24);
     return color;
 }
-
+XColor parse_color(char* color_code) {
+    XColor color;
+    if (color_code[0] == '#') {
+        unsigned int r, g, b;
+        sscanf(color_code, "#%02x%02x%02x", &r, &g, &b);
+        color = createXColorFromRGBA(r, g, b, 255);
+    } else if (strcmp(color_code, "red") == 0) {
+        color = red;
+    } else if (strcmp(color_code, "green") == 0) {
+        color = green;
+    } else if (strcmp(color_code, "yellow") == 0) {
+        color = yellow;
+    } else if (strcmp(color_code, "blue") == 0) {
+        color = blue;
+    } else if (strcmp(color_code, "black") == 0) {
+        color = black;
+    } else {
+        color = white;
+    }
+    return color;
+}
 // Create a window
 void createShapedWindow() {
     XSetWindowAttributes wattr;
@@ -253,28 +273,6 @@ void sighandler(int signum) {
         cout << "edmcoverlay2: SIGINT/SIGTERM, exiting" << endl;
         exit(0);
     }
-}
-
-XPixel parse_color(char* color_code) {
-    XPixel color;
-    if (color_code[0] == '#') {
-        unsigned int r, g, b;
-        sscanf(color_code, "#%02x%02x%02x", &r, &g, &b);
-        color = createXColorFromRGBA(r, g, b, 255);
-    } else if (strcmp(color_code, "red") == 0) {
-        color = red.pixel;
-    } else if (strcmp(color_code, "green") == 0) {
-        color = green.pixel;
-    } else if (strcmp(color_code, "yellow") == 0) {
-        color = yellow.pixel;
-    } else if (strcmp(color_code, "blue") == 0) {
-        color = blue.pixel;
-    } else if (strcmp(color_code, "black") == 0) {
-        color = black.pixel;
-    } else {
-        color = white.pixel;
-    }
-    return color;
 }
 
 int main(int argc, char* argv[]) {
@@ -419,12 +417,12 @@ int main(int argc, char* argv[]) {
                 } else {
                     XSetFont(g_display, gc, normalfont->fid);
                 }
-                main_color = get_color(drawitem.text.color);
+                main_color = parse_color(drawitem.text.color);
                 XSetForeground(g_display, gc, main_color.pixel);
                 XDrawString(g_display, g_win, gc, SCALE_X(drawitem.text.x), SCALE_Y(drawitem.text.y), drawitem.text.text, strlen(drawitem.text.text));
             } else {
                 /* cout << "edmcoverlay2: drawing a shape" << endl; */
-                main_color = get_color(drawitem.shape.color);
+                main_color = parse_color(drawitem.shape.color);
                 XSetForeground(g_display, gc, main_color.pixel);
                 if (strcmp(drawitem.shape.shape, "rect") == 0) {
                     /* cout << "edmcoverlay2: specifically, a rect" << endl; */
@@ -459,7 +457,7 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (strcmp(color, "") != 0) {
-                            XColor marker_color = get_color(color);
+                            XColor marker_color = parse_color(color);
                             XSetForeground(g_display, gc, marker_color.pixel);
                             if (type != nullptr) {
                                 if (strcmp(type, "circle") == 0) {
