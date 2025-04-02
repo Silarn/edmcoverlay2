@@ -444,16 +444,67 @@ int main(int argc, char* argv[]) {
 #define UNINIT_COORD 1000000
                     int x1 = UNINIT_COORD, y1 = UNINIT_COORD, x2 = UNINIT_COORD, y2 = UNINIT_COORD;
                     JsonNode* vect_ = drawitem.shape.vect;
+                    XSetFont(g_display, gc, normalfont->fid);
                     for (JsonNode* node_ = vect_; node_ != nullptr; node_ = node_->next) {
                         // node_ is a point
                         int x, y;
+                        char* color = "";
+                        char* type;
+                        char* text;
+
                         for (auto z : node_->value) {
                             if (strcmp(z->key, "x") == 0) {
                                 x = z->value.toNumber();
                             } else if (strcmp(z->key, "y") == 0) {
                                 y = z->value.toNumber();
+                            } else if (strcmp(z->key ,"color") == 0) {
+                                color = z->value.toString();
+                            } else if (strcmp(z->key, "marker") == 0) {
+                                type = z->value.toString();
+                            } else if (strcmp(z->key, "text") == 0) {
+                                text = z->value.toString();
                             }
                         }
+
+                        if (strcmp(color, "") != 0) {
+                            if (color[0] == '#') {
+                                unsigned int r, g, b;
+                                sscanf(color, "#%02x%02x%02x", &r, &g, &b);
+                                XSetForeground(g_display, gc, createXColorFromRGBA(r, g, b, 255).pixel);
+                            } else if (strcmp(color, "red") == 0) {
+                                XSetForeground(g_display, gc, red.pixel);
+                            } else if (strcmp(color, "green") == 0) {
+                                XSetForeground(g_display, gc, green.pixel);
+                            } else if (strcmp(color, "yellow") == 0) {
+                                XSetForeground(g_display, gc, yellow.pixel);
+                            } else if (strcmp(color, "blue") == 0) {
+                                XSetForeground(g_display, gc, blue.pixel);
+                            } else if (strcmp(color, "black") == 0) {
+                                XSetForeground(g_display, gc, black.pixel);
+                            } else {
+                                XSetForeground(g_display, gc, white.pixel);
+                            }
+                        }
+
+                        if (type != nullptr) {
+                            if (strcmp(type, "circle") == 0) {
+                                XDrawArc(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)-4, 8, 8, 0, 360*64);
+                            }
+                        }
+                        if (type != nullptr) {
+                            if (strcmp(type, "cross") == 0) {
+                                XDrawLine(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)-4, SCALE_X(x)+4, SCALE_Y(y)+4);
+                                XDrawLine(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)+4, SCALE_X(x)+4, SCALE_Y(y)-4);
+                            }
+                        }
+
+                        if (text != nullptr && strcmp(text, "") != 0) {
+                            XDrawString(g_display, g_win, gc, SCALE_X(x+10), SCALE_Y(y+20), text, strlen(text));
+                        }
+                        type = "";
+                        text = "";
+                        color = "";
+
                         if (x1 == UNINIT_COORD) {
                             x1 = x;
                             y1 = y;
