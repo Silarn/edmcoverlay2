@@ -255,6 +255,27 @@ void sighandler(int signum) {
     }
 }
 
+XPixel parse_color(char* color_code) {
+    XPixel color;
+    if (color_code[0] == '#') {
+        unsigned int r, g, b;
+        sscanf(color_code, "#%02x%02x%02x", &r, &g, &b);
+        color = createXColorFromRGBA(r, g, b, 255);
+    } else if (strcmp(color_code, "red") == 0) {
+        color = red.pixel;
+    } else if (strcmp(color_code, "green") == 0) {
+        color = green.pixel;
+    } else if (strcmp(color_code, "yellow") == 0) {
+        color = yellow.pixel;
+    } else if (strcmp(color_code, "blue") == 0) {
+        color = blue.pixel;
+    } else if (strcmp(color_code, "black") == 0) {
+        color = black.pixel;
+    } else {
+        color = white.pixel;
+    }
+    return color;
+}
 
 int main(int argc, char* argv[]) {
     if (argc != 5) {
@@ -352,6 +373,7 @@ int main(int argc, char* argv[]) {
             * size: "normal", "large"
             */
             drawitem_t drawitem;
+            XColor main_color;
             for (JsonNode* node = v->value.toNode(); node != nullptr; node = node->next) {
                 /* cout << "got key: " << node->key << endl; */
                 // common
@@ -397,43 +419,13 @@ int main(int argc, char* argv[]) {
                 } else {
                     XSetFont(g_display, gc, normalfont->fid);
                 }
-                if (drawitem.text.color[0] == '#') {
-                    unsigned int r, g, b;
-                    sscanf(drawitem.text.color, "#%02x%02x%02x", &r, &g, &b);
-                    XSetForeground(g_display, gc, createXColorFromRGBA(r, g, b, 255).pixel);
-                } else if (strcmp(drawitem.text.color, "red") == 0) {
-                    XSetForeground(g_display, gc, red.pixel);
-                } else if (strcmp(drawitem.text.color, "green") == 0) {
-                    XSetForeground(g_display, gc, green.pixel);
-                } else if (strcmp(drawitem.text.color, "yellow") == 0) {
-                    XSetForeground(g_display, gc, yellow.pixel);
-                } else if (strcmp(drawitem.text.color, "blue") == 0) {
-                    XSetForeground(g_display, gc, blue.pixel);
-                } else if (strcmp(drawitem.text.color, "black") == 0) {
-                    XSetForeground(g_display, gc, black.pixel);
-                } else {
-                    XSetForeground(g_display, gc, white.pixel);
-                }
+                main_color = get_color(drawitem.text.color);
+                XSetForeground(g_display, gc, main_color.pixel);
                 XDrawString(g_display, g_win, gc, SCALE_X(drawitem.text.x), SCALE_Y(drawitem.text.y), drawitem.text.text, strlen(drawitem.text.text));
             } else {
                 /* cout << "edmcoverlay2: drawing a shape" << endl; */
-                if (drawitem.shape.color[0] == '#') {
-                    unsigned int r, g, b;
-                    sscanf(drawitem.shape.color, "#%02x%02x%02x", &r, &g, &b);
-                    XSetForeground(g_display, gc, createXColorFromRGBA(r, g, b, 255).pixel);
-                } else if (strcmp(drawitem.shape.color, "red") == 0) {
-                    XSetForeground(g_display, gc, red.pixel);
-                } else if (strcmp(drawitem.shape.color, "green") == 0) {
-                    XSetForeground(g_display, gc, green.pixel);
-                } else if (strcmp(drawitem.shape.color, "yellow") == 0) {
-                    XSetForeground(g_display, gc, yellow.pixel);
-                } else if (strcmp(drawitem.shape.color, "blue") == 0) {
-                    XSetForeground(g_display, gc, blue.pixel);
-                } else if (strcmp(drawitem.shape.color, "black") == 0) {
-                    XSetForeground(g_display, gc, black.pixel);
-                } else {
-                    XSetForeground(g_display, gc, white.pixel);
-                }
+                main_color = get_color(drawitem.shape.color);
+                XSetForeground(g_display, gc, main_color.pixel);
                 if (strcmp(drawitem.shape.shape, "rect") == 0) {
                     /* cout << "edmcoverlay2: specifically, a rect" << endl; */
                     // TODO distinct fill/edge colour
@@ -467,39 +459,23 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (strcmp(color, "") != 0) {
-                            if (color[0] == '#') {
-                                unsigned int r, g, b;
-                                sscanf(color, "#%02x%02x%02x", &r, &g, &b);
-                                XSetForeground(g_display, gc, createXColorFromRGBA(r, g, b, 255).pixel);
-                            } else if (strcmp(color, "red") == 0) {
-                                XSetForeground(g_display, gc, red.pixel);
-                            } else if (strcmp(color, "green") == 0) {
-                                XSetForeground(g_display, gc, green.pixel);
-                            } else if (strcmp(color, "yellow") == 0) {
-                                XSetForeground(g_display, gc, yellow.pixel);
-                            } else if (strcmp(color, "blue") == 0) {
-                                XSetForeground(g_display, gc, blue.pixel);
-                            } else if (strcmp(color, "black") == 0) {
-                                XSetForeground(g_display, gc, black.pixel);
-                            } else {
-                                XSetForeground(g_display, gc, white.pixel);
+                            XColor marker_color = get_color(color);
+                            XSetForeground(g_display, gc, marker_color.pixel);
+                            if (type != nullptr) {
+                                if (strcmp(type, "circle") == 0) {
+                                    XDrawArc(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)-4, 8, 8, 0, 360*64);
+                                }
                             }
-                        }
+                            if (type != nullptr) {
+                                if (strcmp(type, "cross") == 0) {
+                                    XDrawLine(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)-4, SCALE_X(x)+4, SCALE_Y(y)+4);
+                                    XDrawLine(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)+4, SCALE_X(x)+4, SCALE_Y(y)-4);
+                                }
+                            }
 
-                        if (type != nullptr) {
-                            if (strcmp(type, "circle") == 0) {
-                                XDrawArc(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)-4, 8, 8, 0, 360*64);
+                            if (text != nullptr && strcmp(text, "") != 0) {
+                                XDrawString(g_display, g_win, gc, SCALE_X(x+10), SCALE_Y(y+20), text, strlen(text));
                             }
-                        }
-                        if (type != nullptr) {
-                            if (strcmp(type, "cross") == 0) {
-                                XDrawLine(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)-4, SCALE_X(x)+4, SCALE_Y(y)+4);
-                                XDrawLine(g_display, g_win, gc, SCALE_X(x)-4, SCALE_Y(y)+4, SCALE_X(x)+4, SCALE_Y(y)-4);
-                            }
-                        }
-
-                        if (text != nullptr && strcmp(text, "") != 0) {
-                            XDrawString(g_display, g_win, gc, SCALE_X(x+10), SCALE_Y(y+20), text, strlen(text));
                         }
                         type = "";
                         text = "";
@@ -510,6 +486,7 @@ int main(int argc, char* argv[]) {
                             y1 = y;
                             continue;
                         }
+                        XSetForeground(g_display, gc, main_color.pixel);
                         if (x2 == UNINIT_COORD) {
                             x2 = x;
                             y2 = y;
