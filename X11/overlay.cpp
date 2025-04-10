@@ -134,7 +134,33 @@ XColor createXColorFromRGBA(short red, short green, short blue, short alpha) {
     *(&color.pixel) = ((*(&color.pixel)) & 0x00ffffff) | (alpha << 24);
     return color;
 }
-
+XColor parse_color(char* color_code) {
+    XColor color;
+    if (color_code[0] == '#') {
+        if (strlen(color_code) == 7)  {
+            unsigned int r, g, b;
+            sscanf(color_code, "#%2x%2x%2x", &r, &g, &b);
+            color = createXColorFromRGBA(r, g, b, 255);
+        } else if (strlen(color_code) == 9) {
+            unsigned int r, g, b, a;
+            sscanf(color_code, "#%2x%2x%2x%2x", &a, &r, &g, &b);
+            color = createXColorFromRGBA(r, g, b, a);
+        }
+    } else if (strcmp(color_code, "red") == 0) {
+        color = red;
+    } else if (strcmp(color_code, "green") == 0) {
+        color = green;
+    } else if (strcmp(color_code, "yellow") == 0) {
+        color = yellow;
+    } else if (strcmp(color_code, "blue") == 0) {
+        color = blue;
+    } else if (strcmp(color_code, "black") == 0) {
+        color = black;
+    } else {
+        color = white;
+    }
+    return color;
+}
 // Create a window
 void createShapedWindow() {
     XSetWindowAttributes wattr;
@@ -352,6 +378,7 @@ int main(int argc, char* argv[]) {
             * size: "normal", "large"
             */
             drawitem_t drawitem;
+            XColor main_color;
             for (JsonNode* node = v->value.toNode(); node != nullptr; node = node->next) {
                 /* cout << "got key: " << node->key << endl; */
                 // common
@@ -397,43 +424,13 @@ int main(int argc, char* argv[]) {
                 } else {
                     XSetFont(g_display, gc, normalfont->fid);
                 }
-                if (drawitem.text.color[0] == '#') {
-                    unsigned int r, g, b;
-                    sscanf(drawitem.text.color, "#%02x%02x%02x", &r, &g, &b);
-                    XSetForeground(g_display, gc, createXColorFromRGBA(r, g, b, 255).pixel);
-                } else if (strcmp(drawitem.text.color, "red") == 0) {
-                    XSetForeground(g_display, gc, red.pixel);
-                } else if (strcmp(drawitem.text.color, "green") == 0) {
-                    XSetForeground(g_display, gc, green.pixel);
-                } else if (strcmp(drawitem.text.color, "yellow") == 0) {
-                    XSetForeground(g_display, gc, yellow.pixel);
-                } else if (strcmp(drawitem.text.color, "blue") == 0) {
-                    XSetForeground(g_display, gc, blue.pixel);
-                } else if (strcmp(drawitem.text.color, "black") == 0) {
-                    XSetForeground(g_display, gc, black.pixel);
-                } else {
-                    XSetForeground(g_display, gc, white.pixel);
-                }
+                main_color = parse_color(drawitem.text.color);
+                XSetForeground(g_display, gc, main_color.pixel);
                 XDrawString(g_display, g_win, gc, SCALE_X(drawitem.text.x), SCALE_Y(drawitem.text.y), drawitem.text.text, strlen(drawitem.text.text));
             } else {
                 /* cout << "edmcoverlay2: drawing a shape" << endl; */
-                if (drawitem.shape.color[0] == '#') {
-                    unsigned int r, g, b;
-                    sscanf(drawitem.shape.color, "#%02x%02x%02x", &r, &g, &b);
-                    XSetForeground(g_display, gc, createXColorFromRGBA(r, g, b, 255).pixel);
-                } else if (strcmp(drawitem.shape.color, "red") == 0) {
-                    XSetForeground(g_display, gc, red.pixel);
-                } else if (strcmp(drawitem.shape.color, "green") == 0) {
-                    XSetForeground(g_display, gc, green.pixel);
-                } else if (strcmp(drawitem.shape.color, "yellow") == 0) {
-                    XSetForeground(g_display, gc, yellow.pixel);
-                } else if (strcmp(drawitem.shape.color, "blue") == 0) {
-                    XSetForeground(g_display, gc, blue.pixel);
-                } else if (strcmp(drawitem.shape.color, "black") == 0) {
-                    XSetForeground(g_display, gc, black.pixel);
-                } else {
-                    XSetForeground(g_display, gc, white.pixel);
-                }
+                main_color = parse_color(drawitem.shape.color);
+                XSetForeground(g_display, gc, main_color.pixel);
                 if (strcmp(drawitem.shape.shape, "rect") == 0) {
                     /* cout << "edmcoverlay2: specifically, a rect" << endl; */
                     // TODO distinct fill/edge colour
