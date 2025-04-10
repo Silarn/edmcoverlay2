@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import logging
 import sys
+from os import environ
 from pathlib import Path
-import threading
+from Xlib import X, display
 
 from math import pi
 
@@ -14,15 +15,16 @@ import cairo
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
+gi.require_version("GdkX11", "4.0")
 gi.require_version('Gtk4LayerShell', '1.0')
 
-from gi.repository import Gtk, Gdk, GLib, Gio
+from gi.repository import GdkX11, Gtk, Gdk, GLib, Gio
 from gi.repository import Gtk4LayerShell as LayerShell
 
 from messages import Messages
 from renderer import MessageRenderer
 
-class WaylandOverlayWindow(object):
+class OverlayWindow(object):
     def __init__(self, app: Gtk.Application, width: int, height: int):
         self._width = width
         self._height = height
@@ -50,13 +52,19 @@ class WaylandOverlayWindow(object):
         self._window.set_default_size(self._width, self._height)
         self._window.connect('realize', self._disable_input_on_realize)
 
-        if LayerShell.is_supported():
+        if LayerShell.is_supported() and environ.get('XDG_SESSION_TYPE', 'X11') == 'wayland':
             sys.stdout.write("LayerShell supported!")
             LayerShell.init_for_window(self._window)
             LayerShell.set_layer(self._window, LayerShell.Layer.OVERLAY)
             LayerShell.set_anchor(self._window, LayerShell.Edge.LEFT, True)
         else:
             sys.stdout.write("LayerShell not supported!")
+            #window: display.drawable.Window = self._window.get_native().get_surface().get_xid()
+            #x_display: display = Gdk.Display.get_default().get_xdisplay()
+            #window.configure(x=0,y=0,width=self._width,height=self._height,border_width=0,stack_mode=X.Above)
+            self._window.set_can_target(False)
+            self._window.set_can_focus(False)
+            #self._window.set_decorated(False)
 
         #probably useless but might be handy in the future
         self._main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)

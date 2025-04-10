@@ -8,6 +8,7 @@ from subprocess import Popen
 import tkinter as tk
 from tkinter import ttk
 import socket
+from typing import TextIO
 
 from config import appname, config
 import myNotebook as nb
@@ -26,6 +27,7 @@ logger.debug("edmcoverlay2: got lib: %s", repr(edmcoverlay))
 logger.debug("edmcoverlay2: got internal lib: %s", repr(edmcoverlay.edmcoverlay))
 
 overlay_process: Popen = None
+outfile: TextIO | None = None
 xpos_var: tk.IntVar
 ypos_var: tk.IntVar
 width_var: tk.IntVar
@@ -38,6 +40,7 @@ def find_overlay_binary() -> Path:
         overlay_binary = our_directory / 'Wayland' / 'main.py'
     else:
         overlay_binary = our_directory / 'overlay'
+    overlay_binary = our_directory / 'Wayland' / 'main.py'
     if not overlay_binary.exists():
         plug.show_error("edmcoverlay2 unable to find overlay binary")
         raise RuntimeError("edmcoverlay2 unable to find overlay binary")
@@ -45,22 +48,22 @@ def find_overlay_binary() -> Path:
 
 
 def start_overlay():
-    global overlay_process
+    global overlay_process, outfile
 
-    if environ.get('XDG_SESSION_TYPE', 'X11') == 'wayland':
+    # if environ.get('XDG_SESSION_TYPE', 'X11') == 'wayland':
+    overlay_already_running = False
+    connection = socket.socket()
+    try:
+        connection.connect(('localhost', 5010))
+        overlay_already_running = True
+        connection.close()
+    except ConnectionRefusedError:
         overlay_already_running = False
-        try:
-            connection = socket.socket()
-            connection.connect(('localhost', 5010))
-            overlay_already_running = True
-            connection.close()
-        except ConnectionRefusedError:
-            overlay_already_running = False
-            connection.close()
-        if overlay_already_running:
-            overlay_process = None
-            logger.info("edmcoverlay2: not starting overlay, already running")
-            return
+        connection.close()
+    if overlay_already_running:
+        overlay_process = None
+        logger.info("edmcoverlay2: not starting overlay, already running")
+        return
         
     if not overlay_process:
         logger.info("edmcoverlay2: starting overlay")
@@ -68,13 +71,16 @@ def start_overlay():
         ypos = config.get_int("edmcoverlay2_ypos") or 0
         width = config.get_int("edmcoverlay2_width") or 1920
         height = config.get_int("edmcoverlay2_height") or 1080
-        overlay_process = Popen([find_overlay_binary(), str(xpos), str(ypos), str(width), str(height)])
+        if not outfile:
+            log_path = config.app_dir_path / 'logs'
+            outfile = open(log_path / 'edmcoverlay2.log', 'a')
+        overlay_process = Popen([find_overlay_binary(), str(xpos), str(ypos), str(width), str(height)], stdout=outfile, stderr=outfile)
     else:
         logger.warning("edmcoverlay2: not starting overlay, already running")
 
 
 def stop_overlay():
-    global overlay_process
+    global overlay_process, outfile
     if overlay_process:
         logger.info("edmcoverlay2: stopping overlay")
         overlay_process.terminate()
@@ -82,6 +88,9 @@ def stop_overlay():
         overlay_process = None
     else:
         logger.warning("edmcoverlay2: not stopping overlay, not started")
+    if outfile:
+        outfile.close()
+        outfile = None
 
 
 def plugin_start3(plugin_dir):

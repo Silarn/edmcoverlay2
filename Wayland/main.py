@@ -12,7 +12,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
-from window import WaylandOverlayWindow
+from window import OverlayWindow
 from socket_listener import ThreadedTCPServer, TCPStreamHandler
 from messages import Messages
 
@@ -26,7 +26,7 @@ class Overlay(object):
         
         self._messages = Messages()
         self._app = Gtk.Application(application_id=self._application_id)
-        self._overlay_window = WaylandOverlayWindow(self._app, self._width, self._height)
+        self._overlay_window = OverlayWindow(self._app, self._width, self._height)
         self._overlay_window.messages = self._messages
     
         self._server = ThreadedTCPServer((self._hostname, self._port), TCPStreamHandler.Creator(self._messages.add_messages))
