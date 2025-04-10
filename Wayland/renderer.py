@@ -131,8 +131,8 @@ class MessageRenderer(object):
                     ctx,
                     point.get('color', color),
                     point['marker'],
-                    point['x']+2,
-                    point['y']+7)
+                    point['x'],
+                    point['y'])
                 ctx.restore()
             if 'text' in point:
                 ctx.save()
@@ -168,8 +168,8 @@ class MessageRenderer(object):
             ctx.line_to(x-3, y+3)
             ctx.stroke()
         elif marker == 'circle':
-            ctx.move_to(x, y-8)
-            ctx.arc(x-2, y-8, 4, 0, 2*pi)
+            ctx.move_to(x+6, y)
+            ctx.arc(x, y, 6, 0, 2*pi)
             ctx.stroke()
         else:
             logging.error(f'unknown marker: {marker}')
@@ -180,7 +180,6 @@ class MessageRenderer(object):
         
         rgba = self._colors.get(color, None)
         if not rgba:
-            rgba = Gdk.RGBA()
             color_code = re.match('#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?', color)
             if color_code:
                 color_groups = color_code.groups()
@@ -195,9 +194,10 @@ class MessageRenderer(object):
                     b = color_groups[3]
                     a = color_groups[0]
                 try:
+                    rgba = Gdk.RGBA()
                     rgba.parse(f'#{r}{g}{b}{a}')
                     self._colors[color] = rgba
-                    return rgba
                 except Exception as e:
                     logging.error(f' renderer color error for {color}: {e}')
-        return self._colors.get('green')
+                    rgba.parse('green')
+        return rgba
