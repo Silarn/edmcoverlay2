@@ -180,6 +180,7 @@ class MessageRenderer(object):
         
         rgba = self._colors.get(color, None)
         if not rgba:
+            rgba = Gdk.RGBA()
             color_code = re.match('#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?', color)
             if color_code:
                 color_groups = color_code.groups()
@@ -194,10 +195,9 @@ class MessageRenderer(object):
                     b = color_groups[3]
                     a = color_groups[0]
                 try:
-                    rgba = Gdk.RGBA()
                     rgba.parse(f'#{r}{g}{b}{a}')
                     self._colors[color] = rgba
+                    return rgba
                 except Exception as e:
                     logging.error(f' renderer color error for {color}: {e}')
-                    rgba.parse('green')
-        return rgba
+        return self._colors.get('green')
