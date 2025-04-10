@@ -1,11 +1,11 @@
-import logging
 import secrets
 from pathlib import Path
 
 from config import appname
+from EDMCLogging import get_plugin_logger
 
 plugin_name = Path(__file__).parent.name
-logger = logging.getLogger(f"{appname}.{plugin_name}")
+logger = get_plugin_logger(plugin_name)
 
 logger.debug("edmcoverlay2: lib loaded")
 
@@ -84,7 +84,7 @@ class _Overlay:
                 conn.close()
             except socket.error as e:
                 if e.errno == errno.ECONNREFUSED:
-                    logger.warning("edmcoverlay2: conn refused")
+                    logger.warning("edmcoverlay2: conn refused", exc_info=e)
                 else:
                     raise
         logger.info("edmcoverlay2: updater stopping")
@@ -147,7 +147,7 @@ class _Overlay:
         if not text or not color:
             self._overlays.pop(msgid, None)
         else:
-            assert color in ["red", "yellow", "blue", "green", "black"] or re.match("#[0-9a-fA-F]{6}", color)
+            assert color in ["red", "yellow", "blue", "green", "black"] or re.match("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?", color)
             assert ttl > 0
             assert size in ["normal", "large"]
             self._overlays[msgid] = {
@@ -167,10 +167,10 @@ class _Overlay:
             self._overlays.pop(shapeid, None)
         else:
             assert shape in ["rect", "vect"]
-            assert color in ["red", "yellow", "blue", "green", "black"] or re.match("#[0-9a-fA-F]{6}", color)
-            assert fill in ["red", "yellow", "blue", "green", "black"] or re.match("#[0-9a-fA-F]{6}", fill)
+            assert color in ["red", "yellow", "blue", "green", "black"] or re.match("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?", color)
+            assert fill in ["red", "yellow", "blue", "green", "black"] or re.match("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?", fill)
             assert ttl > 0
-            self._overlays[msgid] = {
+            self._overlays[shapeid] = {
                 "shape": shape,
                 "color": color,
                 "fill": fill,

@@ -24,9 +24,12 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
+#include <X11/Xft/Xft.h>
 #include <X11/extensions/shape.h>
 #include <X11/extensions/Xcomposite.h>
 #include <X11/extensions/Xfixes.h>
+#include <pango/pango.h>
+#include <pango/pangoxft.h>
 #include <math.h>
 
 #include <fstream>
@@ -65,6 +68,13 @@ XColor blue;
 XColor black;
 XColor white;
 XColor transparent;
+XftColor red2;
+XftColor green2;
+XftColor yellow2;
+XftColor blue2;
+XftColor black2;
+XftColor white2;
+XftColor transparent2;
 
 std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
@@ -134,6 +144,25 @@ XColor createXColorFromRGBA(short red, short green, short blue, short alpha) {
     *(&color.pixel) = ((*(&color.pixel)) & 0x00ffffff) | (alpha << 24);
     return color;
 }
+// Create a XColor from 3 byte tuple (0 - 255, 0 - 255, 0 - 255).
+XftColor createXftColorFromRGBA(unsigned short red, unsigned short green, unsigned short blue, unsigned short alpha) {
+    XRenderColor base_color;
+    XftColor color;
+
+    // m_color.red = red * 65535 / 255;
+    cout << "Assigning colors" << endl;
+    base_color.red = (red * 0xFFFF) / 0xFF;
+    base_color.green = (green * 0xFFFF) / 0xFF;
+    base_color.blue = (blue * 0xFFFF) / 0xFF;
+    base_color.alpha = (alpha * 0xFFFF) / 0xFF;
+
+    cout << "Allocating color value" << endl;
+    if (!XftColorAllocValue(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), &base_color, &color)) {
+        std::cerr << "createXColorFromRGB: Cannot create color" << endl;
+        exit(-1);
+    }
+    return color;
+}
 XColor parse_color(char* color_code) {
     XColor color;
     if (color_code[0] == '#') {
@@ -158,14 +187,14 @@ XColor parse_color(char* color_code) {
 // Create a window
 void createShapedWindow() {
     XSetWindowAttributes wattr;
-    XColor bgcolor = createXColorFromRGBA(0, 0, 0, 0);
+    XftColor bgcolor = createXftColorFromRGBA(0, 0, 0, 0);
 
-    Window root    = DefaultRootWindow(g_display);
+    Window root    = XDefaultRootWindow(g_display);
     Visual *visual = DefaultVisual(g_display, g_screen);
 
     XVisualInfo vinfo;
     XMatchVisualInfo(g_display, DefaultScreen(g_display), 32, TrueColor, &vinfo);
-    g_colormap = XCreateColormap(g_display, DefaultRootWindow(g_display), vinfo.visual, AllocNone);
+    g_colormap = XCreateColormap(g_display, XDefaultRootWindow(g_display), vinfo.visual, AllocNone);
 
     XSetWindowAttributes attr;
     attr.background_pixmap = None;
@@ -208,6 +237,18 @@ void createShapedWindow() {
     black = createXColorFromRGBA(0, 0, 0, 100);
     white = createXColorFromRGBA(255, 255, 255, 255);
     transparent = createXColorFromRGBA(0, 0, 0, 0);
+    cout << "Making the colors..." << endl;
+    try {
+        red2 = createXftColorFromRGBA(255, 0, 0, 255);
+        green2 = createXftColorFromRGBA(0, 255, 0, 255);
+        yellow2 = createXftColorFromRGBA(255, 255, 0, 255);
+        blue2 = createXftColorFromRGBA(0, 0, 255, 255);
+        black2 = createXftColorFromRGBA(0, 0, 0, 100);
+        white2 = createXftColorFromRGBA(255, 255, 255, 255);
+        transparent2 = createXftColorFromRGBA(0, 0, 0, 0);
+    } catch(...) {
+        cout << "Error..." << endl;
+    }
 }
 
 
@@ -295,23 +336,52 @@ int main(int argc, char* argv[]) {
 
     {
         GC gc;
-        XGCValues gcv;
-        gc = XCreateGC(g_display, g_win, 0, 0);
-        XSetBackground(g_display, gc, white.pixel);
-        XSetForeground(g_display, gc, transparent.pixel);
-        XFillRectangle(g_display, g_win, gc, 0, 0, window_width, window_height);
-        const char* fontname = "9x15bold";
-        XFontStruct* normalfont = XLoadQueryFont(g_display, fontname);
-        if (!normalfont) {
-            fprintf(stderr, "unable to load font %s > using fixed\n", fontname);
-            normalfont = XLoadQueryFont(g_display, "fixed");
-        }
-        XSetForeground(g_display, gc, black.pixel);
-        XFillRectangle(g_display, g_win, gc, 0, 0, 250, 100);
+        //XGCValues gcv;
+        gc = XDefaultGC(g_display, DefaultScreen(g_display));
+        cout << "create draw" << endl;
+        XftDraw *draw = XftDrawCreate(g_display, g_screen, DefaultVisual(g_display, g_win), DefaultColormap(g_display, g_win));
+        cout << "set foreground" << endl;
+        XSetForeground(g_display, gc, transparent2.pixel);
+//        XSetBackground(g_display, gc, white.pixel);
+//        XSetForeground(g_display, gc, transparent.pixel);
+//        XFillRectangle(g_display, g_win, gc, 0, 0, window_width, window_height);
+        cout << "draw rect 1" << endl;
+        XftDrawRect(draw, &transparent2, 0, 0, window_width, window_height);
+        //const char* fontname = "9x15bold";
+        //XFontStruct* normalfont = XLoadQueryFont(g_display, fontname);
+        //if (!normalfont) {
+        //    fprintf(stderr, "unable to load font %s > using fixed\n", fontname);
+        //    normalfont = XLoadQueryFont(g_display, "fixed");
+        //}
+        //XSetForeground(g_display, gc, black.pixel);
+        //XFillRectangle(g_display, g_win, gc, 0, 0, 250, 100);
+        cout << "draw rect 2" << endl;
+        XftDrawRect(draw, &black2, 0, 0, 250, 100);
         const char* text = "edmcoverlay2 overlay process: running!";
-        XSetForeground(g_display, gc, green.pixel);
-        XDrawString(g_display, g_win, gc, 10, 60, text, strlen(text));
-        XFreeFont(g_display, normalfont);
+        cout << "creating font description" << endl;
+//        PangoFontDescription *normal_font_description = pango_font_description_from_string(
+//            "Terminal Normal 16 Regular"
+//        );
+        //PangoFont *normal_font = pango_fontset_get_font(normal_fontset, )
+        cout << "creating font map" << endl;
+        //PangoFontMap *font_map = pango_xft_get_font_map(g_display, g_screen);
+        cout << "getting context" << endl;
+        //PangoContext *font_normal_context = pango_font_map_create_context(font_map);
+        cout << "getting layout" << endl;
+        //PangoLayout *text_layout = pango_layout_new(font_normal_context);
+        cout << "setting text" << endl;
+        //pango_layout_set_text(text_layout, text, strlen(text));
+        cout << "setting font description" << endl;
+        //pango_layout_set_font_description(text_layout, normal_font_description);
+        //pango_shape(text, strlen(text), normal_analysis, glyphs);
+        //XSetForeground(g_display, gc, green.pixel);
+        cout << "render layout" << endl;
+        //pango_xft_render_layout(draw, &green2, text_layout, 10, 60);
+        cout << "free desc" << endl;
+        //pango_font_description_free(normal_font_description);
+        cout << "unref layout" << endl;
+        //g_object_unref(text_layout);
+        //XFreeFont(g_display, normalfont);
         XFreeGC(g_display, gc);
         XFlush(g_display);
     }
@@ -505,6 +575,13 @@ int main(int argc, char* argv[]) {
 
         XFreeFont(g_display, normalfont);
         XFreeFont(g_display, largefont);
+//        XftColorFree(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), red2);
+//        XftColorFree(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), green2);
+//        XftColorFree(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), yellow2);
+//        XftColorFree(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), blue2);
+//        XftColorFree(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), black2);
+//        XftColorFree(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), white2);
+//        XftColorFree(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), transparent2);
         XFreeGC(g_display, gc);
         XFlush(g_display);
 

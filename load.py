@@ -1,7 +1,7 @@
 """Totally definitely EDMCOverlay."""
 
 import importlib
-import logging
+from io import TextIOWrapper
 from pathlib import Path
 from subprocess import Popen
 import tkinter as tk
@@ -11,10 +11,11 @@ from config import appname, config
 import myNotebook as nb
 import plug
 from ttkHyperlinkLabel import HyperlinkLabel
+from EDMCLogging import get_plugin_logger
 
 
 plugin_name = Path(__file__).parent.name
-logger = logging.getLogger(f"{appname}.{plugin_name}")
+logger = get_plugin_logger(plugin_name)
 
 
 base_dir = Path(__file__).parent
@@ -24,6 +25,7 @@ logger.debug("edmcoverlay2: got lib: %s", repr(edmcoverlay))
 logger.debug("edmcoverlay2: got internal lib: %s", repr(edmcoverlay._edmcoverlay))
 
 overlay_process: Popen = None
+outfile: TextIOWrapper = None
 xpos_var: tk.IntVar
 ypos_var: tk.IntVar
 width_var: tk.IntVar
@@ -40,25 +42,31 @@ def find_overlay_binary() -> Path:
 
 
 def start_overlay():
-    global overlay_process
+    global overlay_process, outfile
     if not overlay_process:
         logger.info("edmcoverlay2: starting overlay")
         xpos = int(config.get("edmcoverlay2_xpos") or 0)
         ypos = int(config.get("edmcoverlay2_ypos") or 0)
         width = int(config.get("edmcoverlay2_width") or 1920)
         height = int(config.get("edmcoverlay2_height") or 1080)
-        overlay_process = Popen([find_overlay_binary(), str(xpos), str(ypos), str(width), str(height)])
+        log_dir = config.app_dir_path / 'logs'
+        if not outfile:
+            outfile = open(log_dir / 'edmcoverlay.log', 'a')
+        overlay_process = Popen([find_overlay_binary(), str(xpos), str(ypos), str(width), str(height)], stdout=outfile, stderr=outfile)
     else:
         logger.warning("edmcoverlay2: not starting overlay, already running")
 
 
 def stop_overlay():
-    global overlay_process
+    global overlay_process, outfile
     if overlay_process:
         logger.info("edmcoverlay2: stopping overlay")
         overlay_process.terminate()
         overlay_process.communicate()
         overlay_process = None
+    if outfile:
+        outfile.close()
+        outfile = None
     else:
         logger.warning("edmcoverlay2: not stopping overlay, not started")
 

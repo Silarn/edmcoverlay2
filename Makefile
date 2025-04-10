@@ -1,2 +1,2 @@
 overlay: Makefile overlay.cpp gason.cpp gason.h socket.cc socket.hh json_message.cc json_message.hh
-	g++ -g -O1 -std=c++11 -o overlay overlay.cpp gason.cpp json_message.cc socket.cc -lX11 -lXfixes -lXext -Wall
+	g++ -g -O1 -std=c++11 -o overlay overlay.cpp gason.cpp json_message.cc socket.cc -lX11 -lXfixes -lXext -lXft -lpango-1.0 -lcairo -lpangoxft-1.0 -lpangocairo-1.0 -lgobject-2.0 -I/usr/include/pango-1.0 -I/usr/include/libmount -I/usr/include/blkid -I/usr/include/fribidi -I/usr/include/cairo -I/usr/include/libxml2 -I/usr/include/freetype2 -I/usr/include/libpng16 -DWITH_GZFILEOP -I/usr/include/harfbuzz -I/usr/include/glib-2.0 -I/usr/lib64/glib-2.0/include -I/usr/include/sysprof-6 -pthread -I/usr/include/pixman-1 -Wall
