@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import logging
+import sys
 from pathlib import Path
 import threading
 
@@ -49,9 +50,13 @@ class WaylandOverlayWindow(object):
         self._window.set_default_size(self._width, self._height)
         self._window.connect('realize', self._disable_input_on_realize)
 
-        LayerShell.init_for_window(self._window)
-        LayerShell.set_layer(self._window, LayerShell.Layer.OVERLAY)
-        LayerShell.set_anchor(self._window, LayerShell.Edge.LEFT, True)
+        if LayerShell.is_supported():
+            sys.stdout.write("LayerShell supported!")
+            LayerShell.init_for_window(self._window)
+            LayerShell.set_layer(self._window, LayerShell.Layer.OVERLAY)
+            LayerShell.set_anchor(self._window, LayerShell.Edge.LEFT, True)
+        else:
+            sys.stdout.write("LayerShell not supported!")
 
         #probably useless but might be handy in the future
         self._main_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
