@@ -51,12 +51,13 @@ unsigned short port = 5020;
 
 using namespace std;
 
-Display *g_display;
-int      g_screen;
-Window   g_win;
-XftDraw *g_draw;
-int      g_disp_width;
-int      g_disp_height;
+Display    *g_display;
+XVisualInfo g_vinfo;
+int         g_screen;
+Window      g_win;
+XftDraw    *g_draw;
+int         g_disp_width;
+int         g_disp_height;
 /* Pixmap   g_bitmap; */
 Colormap g_colormap;
 
@@ -113,7 +114,7 @@ XftColor createXftColorFromRGB(short red, short green, short blue) {
     color.blue = (blue * 0xFFFF) / 0xFF;
     color.alpha = 0xFFFF;
 
-    if (!XftColorAllocValue(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), &color, &xft_color)) {
+    if (!XftColorAllocValue(g_display, DefaultVisual(g_display, g_screen), g_colormap, &color, &xft_color)) {
         std::cerr << "createXftColorFromRGB: Cannot create color" << endl;
         exit(-1);
     }
@@ -130,7 +131,7 @@ XftColor createXftColorFromRGBA(short red, short green, short blue, short alpha)
     color.blue = (blue * 0xFFFF) / 0xFF;
     color.alpha = (alpha * 0xFFFF) / 0xFF;
 
-    if (!XftColorAllocValue(g_display, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen), &color, &xft_color)) {
+    if (!XftColorAllocValue(g_display, DefaultVisual(g_display, g_screen), g_colormap, &color, &xft_color)) {
         std::cerr << "createXftColorFromRGB: Cannot create color" << endl;
         exit(-1);
     }
@@ -171,9 +172,8 @@ void createShapedWindow() {
     Window root    = DefaultRootWindow(g_display);
     Visual *visual = DefaultVisual(g_display, g_screen);
 
-    XVisualInfo vinfo;
-    XMatchVisualInfo(g_display, DefaultScreen(g_display), 32, TrueColor, &vinfo);
-    g_colormap = XCreateColormap(g_display, DefaultRootWindow(g_display), vinfo.visual, AllocNone);
+    XMatchVisualInfo(g_display, DefaultScreen(g_display), 32, TrueColor, &g_vinfo);
+    g_colormap = XCreateColormap(g_display, DefaultRootWindow(g_display), g_vinfo.visual, AllocNone);
 
     XSetWindowAttributes attr;
     attr.background_pixmap = None;
@@ -187,10 +187,9 @@ void createShapedWindow() {
     attr.override_redirect=1; // OpenGL > 0
     attr.colormap = g_colormap;
 
-    //unsigned long mask = CWBackPixel|CWBorderPixel|CWWinGravity|CWBitGravity|CWSaveUnder|CWEventMask|CWDontPropagate|CWOverrideRedirect;
     unsigned long mask = CWColormap | CWBorderPixel | CWBackPixel | CWEventMask | CWWinGravity|CWBitGravity | CWSaveUnder | CWDontPropagate | CWOverrideRedirect;
 
-    g_win = XCreateWindow(g_display, root, window_xpos, window_ypos, window_width, window_height, 0, vinfo.depth, InputOutput, vinfo.visual, mask, &attr);
+    g_win = XCreateWindow(g_display, root, window_xpos, window_ypos, window_width, window_height, 0, g_vinfo.depth, InputOutput, g_vinfo.visual, mask, &attr);
 
 	/* g_bitmap = XCreateBitmapFromData (g_display, RootWindow(g_display, g_screen), (char *)myshape_bits, myshape_width, myshape_height); */
 
@@ -282,7 +281,6 @@ void sighandler(int signum) {
         XftDrawDestroy(g_draw);
         XDestroyWindow(g_display, g_win);
         XCloseDisplay(g_display);
-        server.close();
         exit(0);
     }
 }
@@ -299,7 +297,7 @@ int main(int argc, char* argv[]) {
     cout << "edmcoverlay2: overlay starting up..." << endl;
     openDisplay();
     createShapedWindow();
-    g_draw = XftDrawCreate(g_display, g_win, DefaultVisual(g_display, g_screen), DefaultColormap(g_display, g_screen));
+    g_draw = XftDrawCreate(g_display, g_win, g_vinfo.visual, g_colormap);
     signal(SIGINT, sighandler);
     signal(SIGTERM, sighandler);
 
@@ -309,13 +307,16 @@ int main(int argc, char* argv[]) {
         GC gc;
         XGCValues gcv;
         gc = XCreateGC(g_display, g_win, 0, 0);
-        XftDrawRect(g_draw, &transparent, 0, 0, window_width, window_height);
+        XSetBackground(g_display, gc, white.pixel);
+        XSetForeground(g_display, gc, transparent.pixel);
+        XFillRectangle(g_display, g_win, gc, 0, 0, window_width, window_height);
         const char *fontname = "Open Sans";
         XftFont *normalfont = XftFontOpen(g_display, g_screen,
             XFT_FAMILY, XftTypeString, fontname,
-            XFT_SIZE, XftTypeDouble, 16.0,
+            XFT_SIZE, XftTypeDouble, 14.0,
             NULL);
-        XftDrawRect(g_draw, &black, 0, 0, 250, 100);
+        XSetForeground(g_display, gc, black.pixel);
+        XFillRectangle(g_display, g_win, gc, 0, 0, 250, 100);
         const char* text = "edmcoverlay2 overlay process: running!";
         const unsigned char* utext = reinterpret_cast<const unsigned char *>(text);
         XftDrawStringUtf8(g_draw, &green, normalfont, SCALE_X(0), SCALE_Y(0) - 10, utext, strlen(text));
@@ -345,11 +346,12 @@ int main(int argc, char* argv[]) {
         GC gc;
         XGCValues gcv;
         gc = XCreateGC(g_display, g_win, 0, 0);
+        XSetBackground(g_display, gc, white.pixel);
 
         const char *fontname = "Open Sans";
         XftFont *normalfont = XftFontOpen(g_display, g_screen,
             XFT_FAMILY, XftTypeString, fontname,
-            XFT_SIZE, XftTypeDouble, 16.0,
+            XFT_SIZE, XftTypeDouble, 14.0,
             NULL);
         fontname = "Open Sans";
         const char *fontstyle = "Bold";
@@ -360,8 +362,11 @@ int main(int argc, char* argv[]) {
             NULL
         );
 
-        XftDrawRect(g_draw, &transparent, 0, 0, window_width, window_height);
-        XftDrawRect(g_draw, &black, 0, 0, 250, 100);
+        XSetForeground(g_display, gc, transparent.pixel);
+        XFillRectangle(g_display, g_win, gc, 0, 0, window_width, window_height);
+        XSetForeground(g_display, gc, black.pixel);
+        XFillRectangle(g_display, g_win, gc, 0, 0, 200, 50);
+        XSetForeground(g_display, gc, white.pixel);
         const char* version = "edmcoverlay2 running";
         const unsigned char* u_text = reinterpret_cast<const unsigned char *>(version);
         XftDrawStringUtf8(g_draw, &white, normalfont, SCALE_X(0), SCALE_Y(0) - 10, u_text, strlen(version));
@@ -442,7 +447,8 @@ int main(int argc, char* argv[]) {
                     for (JsonNode* node_ = vect_; node_ != nullptr; node_ = node_->next) {
                         // node_ is a point
                         int x, y;
-                        char* color;
+                        XftColor marker_color;
+                        char* color = "";
                         char* type;
                         char* text;
 
@@ -461,7 +467,7 @@ int main(int argc, char* argv[]) {
                         }
 
                         if (strcmp(color, "") != 0) {
-                            XftColor marker_color = parse_color(color);
+                            marker_color = parse_color(color);
                             XSetForeground(g_display, gc, marker_color.pixel);
                             if (type != nullptr) {
                                 if (strcmp(type, "circle") == 0) {
@@ -480,9 +486,10 @@ int main(int argc, char* argv[]) {
                                 XftDrawStringUtf8(g_draw, &marker_color, normalfont, SCALE_X(x+10), SCALE_Y(y+20), u_text, strlen(text));
                             }
                         }
-                        delete[] color;
-                        delete[] type;
-                        delete[] text;
+                        type = "";
+                        text = "";
+                        color = "";
+                        XftColorFree(g_display, g_vinfo.visual, g_colormap, &marker_color);
 
                         if (x1 == UNINIT_COORD) {
                             x1 = x;
@@ -504,6 +511,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
+            XftColorFree(g_display, g_vinfo.visual, g_colormap, &main_color);
         }
 
         /* cout << "edmcoverlay2: done drawing " << std::to_string(n) << " graphics" << endl; */
@@ -519,6 +527,13 @@ int main(int argc, char* argv[]) {
     }
     XftDrawDestroy(g_draw);
     XDestroyWindow(g_display, g_win);
+    XftColorFree(g_display, g_vinfo.visual, g_colormap, &red);
+    XftColorFree(g_display, g_vinfo.visual, g_colormap, &green);
+    XftColorFree(g_display, g_vinfo.visual, g_colormap, &yellow);
+    XftColorFree(g_display, g_vinfo.visual, g_colormap, &blue);
+    XftColorFree(g_display, g_vinfo.visual, g_colormap, &black);
+    XftColorFree(g_display, g_vinfo.visual, g_colormap, &white);
+    XftColorFree(g_display, g_vinfo.visual, g_colormap, &transparent);
     XCloseDisplay(g_display);
     server.close();
     return 0;
