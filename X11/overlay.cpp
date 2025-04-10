@@ -137,9 +137,15 @@ XColor createXColorFromRGBA(short red, short green, short blue, short alpha) {
 XColor parse_color(char* color_code) {
     XColor color;
     if (color_code[0] == '#') {
-        unsigned int r, g, b;
-        sscanf(color_code, "#%02x%02x%02x", &r, &g, &b);
-        color = createXColorFromRGBA(r, g, b, 255);
+        if (strlen(color_code) == 7)  {
+            unsigned int r, g, b;
+            sscanf(color_code, "#%2x%2x%2x", &r, &g, &b);
+            color = createXColorFromRGBA(r, g, b, 255);
+        } else if (strlen(color_code) == 9) {
+            unsigned int r, g, b, a;
+            sscanf(color_code, "#%2x%2x%2x%2x", &a, &r, &g, &b);
+            color = createXColorFromRGBA(r, g, b, a);
+        }
     } else if (strcmp(color_code, "red") == 0) {
         color = red;
     } else if (strcmp(color_code, "green") == 0) {
