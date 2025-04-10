@@ -1,4 +1,5 @@
 import logging
+import re
 
 from math import pi
 
@@ -167,7 +168,8 @@ class MessageRenderer(object):
             ctx.line_to(x-3, y+3)
             ctx.stroke()
         elif marker == 'circle':
-            ctx.arc(x, y, 8, 0, 2*pi)
+            ctx.move_to(x, y-8)
+            ctx.arc(x-2, y-8, 4, 0, 2*pi)
             ctx.stroke()
         else:
             logging.error(f'unknown marker: {marker}')
@@ -176,13 +178,26 @@ class MessageRenderer(object):
         if color is None or color == '' or color == '#':
             return None
         
-        rgba = self._colors.get(color)
+        rgba = self._colors.get(color, None)
         if not rgba:
-            try:
-                rgba = Gdk.RGBA()
-                rgba.parse(color)
-                self._colors[color] = rgba
-            except Exception as e:
-                logging.error(f' renderer color error for {color}: {e}')
-                rgba.parse('green')
+            color_code = re.match('#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?', color)
+            if color_code:
+                color_groups = color_code.groups()
+                if not color_groups[3]:
+                    r = color_groups[0]
+                    g = color_groups[1]
+                    b = color_groups[2]
+                    a = 'ff'
+                else:
+                    r = color_groups[1]
+                    g = color_groups[2]
+                    b = color_groups[3]
+                    a = color_groups[0]
+                try:
+                    rgba = Gdk.RGBA()
+                    rgba.parse(f'#{r}{g}{b}{a}')
+                    self._colors[color] = rgba
+                except Exception as e:
+                    logging.error(f' renderer color error for {color}: {e}')
+                    rgba.parse('green')
         return rgba
