@@ -310,7 +310,7 @@ int main(int argc, char* argv[]) {
         XSetBackground(g_display, gc, white.pixel);
         XSetForeground(g_display, gc, transparent.pixel);
         XFillRectangle(g_display, g_win, gc, 0, 0, window_width, window_height);
-        const char *fontname = "Open Sans";
+        const char *fontname = "Noto Sans";
         XftFont *normalfont = XftFontOpen(g_display, g_screen,
             XFT_FAMILY, XftTypeString, fontname,
             XFT_SIZE, XftTypeDouble, 14.0,
@@ -348,13 +348,12 @@ int main(int argc, char* argv[]) {
         gc = XCreateGC(g_display, g_win, 0, 0);
         XSetBackground(g_display, gc, white.pixel);
 
-        const char *fontname = "Open Sans";
+        const char *fontname = "Noto Sans";
         XftFont *normalfont = XftFontOpen(g_display, g_screen,
             XFT_FAMILY, XftTypeString, fontname,
             XFT_SIZE, XftTypeDouble, 14.0,
             NULL);
-        fontname = "Open Sans";
-        const char *fontstyle = "Bold";
+        const char *fontstyle = "Demi Bold";
         XftFont *largefont = XftFontOpen(g_display, g_screen,
             XFT_FAMILY, XftTypeString, fontname,
             XFT_STYLE, XftTypeString, fontstyle,
